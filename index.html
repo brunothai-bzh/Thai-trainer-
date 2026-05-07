@@ -329,11 +329,15 @@ function showResult(thai, alts) {
   fillTrans(thai);
 }
 function fillTrans(thai) {
-  const d = DICT_MAP[thai];
-  document.getElementById('trEN').textContent  = d ? d.en  : '(non dans le dico local)';
-  document.getElementById('trFR').textContent  = d ? d.fr  : '(non dans le dico local)';
+  const clean = thai.trim().replace(/\s+/g, '');
+  const d = DICT_MAP[clean] || DICT_MAP[thai.trim()];
+  document.getElementById('trEN').textContent  = d ? d.en  : '(mot reconnu — pas dans le dico)';
+  document.getElementById('trFR').textContent  = d ? d.fr  : '(mot reconnu — pas dans le dico)';
   document.getElementById('trROM').textContent = d ? d.rom : '—';
   document.getElementById('trPOS').textContent = d ? d.pos : '—';
+  if (!d) {
+    console.log('Mot non trouvé dans dico:', JSON.stringify(clean), 'longueur:', clean.length);
+  }
 }
 
 document.getElementById('btnRec').addEventListener('click', async () => {
