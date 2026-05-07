@@ -304,8 +304,8 @@ async function callMyScript() {
   if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.message || 'Erreur HTTP ' + resp.status); }
   const jiix = await resp.json();
   const words = jiix.words || [];
-  const label = words.map(w => w.label || '').join('').trim();
-  const alts  = words[0]?.candidates?.map(c => c.label).filter(Boolean) || [];
+  const label = words.map(w => (w.label || '').replace(/\s/g, '')).join('').trim();
+  const alts  = words[0]?.candidates?.map(c => (c.label || '').replace(/\s/g, '')).filter(Boolean) || [];
   if (!label) throw new Error('Rien reconnu — écris plus grand');
   return { label, alts };
 }
