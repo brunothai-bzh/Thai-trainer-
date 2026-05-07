@@ -12,7 +12,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --green: #1D9E75; --green-dark: #0F6E56; --green-light: #E1F5EE; --green-mid: #9FE1CB;
-    --amber-light: #FEF3C7; --red: #DC2626;
+    --red: #DC2626;
     --gray-50: #F9FAFB; --gray-100: #F3F4F6; --gray-200: #E5E7EB; --gray-300: #D1D5DB;
     --gray-400: #9CA3AF; --gray-600: #4B5563; --gray-700: #374151; --gray-800: #1F2937;
     --radius: 12px; --radius-sm: 8px; --radius-xs: 6px;
@@ -66,7 +66,7 @@
   .tts-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
   .tts-row .btn { font-size: 13px; padding: 8px 10px; }
  
-  .status-bar { font-size: 12px; color: var(--gray-500); text-align: center; min-height: 20px; padding: 2px 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .status-bar { font-size: 12px; color: var(--gray-600); text-align: center; min-height: 20px; padding: 2px 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
   .status-bar.err { color: var(--red); }
   .status-bar.ok  { color: var(--green); }
  
@@ -104,7 +104,6 @@
  
 <main class="main">
  
-  <!-- PANNEAU 1 : CANVAS -->
   <div class="panel">
     <div class="panel-header"><div class="panel-dot"></div>1 — Écriture stylet</div>
     <div class="panel-body">
@@ -130,7 +129,6 @@
     </div>
   </div>
  
-  <!-- PANNEAU 2 : RÉSULTAT -->
   <div class="panel">
     <div class="panel-header"><div class="panel-dot"></div>2 — Texte reconnu</div>
     <div class="panel-body">
@@ -155,7 +153,6 @@
     </div>
   </div>
  
-  <!-- PANNEAU 3 : TRADUCTION -->
   <div class="panel">
     <div class="panel-header"><div class="panel-dot"></div>3 — Traduction</div>
     <div class="panel-body">
@@ -175,18 +172,15 @@
 </main>
  
 <footer class="app-footer">
-  Thai Handwriting Trainer · Reconnaissance : <a href="https://developer.myscript.com" target="_blank">MyScript iink</a> (2 000 req. gratuites)<br>
-  TTS : voix thaïe native Android/Chrome<br>
+  Thai Handwriting Trainer · <a href="https://developer.myscript.com" target="_blank">MyScript iink</a> · 2 000 req. gratuites<br>
   <span style="font-family:'Noto Sans Thai',sans-serif;">ฝึกภาษาไทยทุกวัน 🇹🇭</span>
 </footer>
  
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script>
-// ── CLÉS MYSCRIPT (intégrées) ──
 const APP_KEY  = '0c8d5f2a-957e-475d-aae2-3cad538d5995';
 const HMAC_KEY = '25cba5bd-3ca1-4b23-a98f-d822cad8ef91';
  
-// ── DICTIONNAIRE ──
 const DICT = [
   {thai:"สวัสดี", en:"Hello",      fr:"Bonjour",   rom:"Sawatdee",  pos:"interjection"},
   {thai:"ขอบคุณ", en:"Thank you",  fr:"Merci",     rom:"Khob khun", pos:"interjection"},
@@ -212,7 +206,6 @@ const DICT = [
 const DICT_MAP = {};
 DICT.forEach(d => DICT_MAP[d.thai] = d);
  
-// ── CANVAS ──
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
 let drawing = false, strokes = [], currentStroke = [], hasDrawing = false;
@@ -259,7 +252,6 @@ canvas.addEventListener('touchstart', startDraw, {passive:false});
 canvas.addEventListener('touchmove',  moveDraw,  {passive:false});
 canvas.addEventListener('touchend',   endDraw);
  
-// ── EFFACER ──
 document.getElementById('btnClear').addEventListener('click', () => {
   const r = canvas.getBoundingClientRect();
   ctx.clearRect(0, 0, r.width, r.height);
@@ -279,30 +271,41 @@ document.getElementById('btnClear').addEventListener('click', () => {
   document.querySelectorAll('.demo-chip').forEach(c => c.classList.remove('active'));
 });
  
-// ── HMAC + PAYLOAD ──
 function computeHMAC(body) {
   return CryptoJS.HmacSHA512(body, APP_KEY + HMAC_KEY).toString(CryptoJS.enc.Hex);
 }
+ 
 function buildPayload() {
   const r = canvas.getBoundingClientRect();
+  const w = Math.round(r.width);
+  const h = Math.round(r.height);
   const t0 = strokes[0][0].t;
+ 
   return JSON.stringify({
+    contentType: "Text",
     configuration: {
       lang: "th_TH",
-      export: { jiix: { "bounding-box": false, strokes: false, text: { chars: false, words: true } } }
+      export: {
+        jiix: {
+          "bounding-box": false,
+          strokes: false,
+          text: { chars: false, words: true }
+        }
+      }
     },
-    height: Math.round(r.height),
-    width:  Math.round(r.width),
-    strokeGroups: [{ strokes: strokes.map(s => ({
-      x: s.map(p => Math.round(p.x)),
-      y: s.map(p => Math.round(p.y)),
-      t: s.map(p => p.t - t0),
-      pointerType: "PEN"
-    })) }]
+    height: h,
+    width: w,
+    strokeGroups: [{
+      strokes: strokes.map(s => ({
+        x: s.map(p => Math.round(p.x)),
+        y: s.map(p => Math.round(p.y)),
+        t: s.map(p => p.t - t0),
+        pointerType: "PEN"
+      }))
+    }]
   });
 }
  
-// ── APPEL MYSCRIPT ──
 async function callMyScript() {
   const body = buildPayload();
   const resp = await fetch('https://cloud.myscript.com/api/v4.0/iink/batch', {
@@ -323,11 +326,10 @@ async function callMyScript() {
   const words = jiix.words || [];
   const label = words.map(w => w.label || '').join('').trim();
   const alts  = words[0]?.candidates?.map(c => c.label).filter(Boolean) || [];
-  if (!label) throw new Error('Rien reconnu — écris plus grand et plus lentement');
+  if (!label) throw new Error('Rien reconnu — écris plus grand');
   return { label, alts };
 }
  
-// ── AFFICHER RÉSULTAT ──
 function showResult(thai, alts) {
   document.getElementById('resultPH').style.display = 'none';
   const rt = document.getElementById('resultThai');
@@ -346,6 +348,7 @@ function showResult(thai, alts) {
   }
   fillTrans(thai);
 }
+ 
 function fillTrans(thai) {
   const d = DICT_MAP[thai];
   document.getElementById('trEN').textContent  = d ? d.en  : '(non dans le dico local)';
@@ -354,7 +357,6 @@ function fillTrans(thai) {
   document.getElementById('trPOS').textContent = d ? d.pos : '—';
 }
  
-// ── RECONNAÎTRE ──
 document.getElementById('btnRec').addEventListener('click', async () => {
   if (strokes.length === 0) { setStatus('Dessine quelque chose d\'abord !', 'err'); return; }
   const btn = document.getElementById('btnRec');
@@ -374,7 +376,6 @@ document.getElementById('btnRec').addEventListener('click', async () => {
   }
 });
  
-// ── TTS ──
 function speakThai(text) {
   if (!text || text === '—') return;
   if (!window.speechSynthesis) { setStatus('TTS non disponible', 'err'); return; }
@@ -385,7 +386,7 @@ function speakThai(text) {
   if (v) utt.voice = v;
   setStatus('Lecture…', '');
   utt.onend  = () => setStatus('', '');
-  utt.onerror = () => setStatus('Voix thaïe non dispo — installe la langue thaïe dans Paramètres Android', 'err');
+  utt.onerror = () => setStatus('Voix thaïe non dispo sur cet appareil', 'err');
   speechSynthesis.speak(utt);
 }
 document.getElementById('btnTTS').addEventListener('click',  () => speakThai(document.getElementById('resultThai').textContent));
@@ -396,7 +397,6 @@ document.getElementById('btnCopy').addEventListener('click', () => {
   navigator.clipboard.writeText(t).then(() => { setStatus('✓ Copié', 'ok'); setTimeout(() => setStatus('', ''), 2000); });
 });
  
-// ── MOTS DÉMO ──
 DICT.forEach(d => {
   const chip = document.createElement('button');
   chip.className = 'demo-chip'; chip.textContent = d.thai; chip.title = d.fr;
@@ -414,7 +414,6 @@ DICT.forEach(d => {
   document.getElementById('demoChips').appendChild(chip);
 });
  
-// ── UTILS ──
 function setStatus(html, cls) {
   const el = document.getElementById('statusBar');
   el.innerHTML = html; el.className = 'status-bar' + (cls ? ' '+cls : '');
@@ -426,4 +425,5 @@ function setBadge(text, cls) {
 if (window.speechSynthesis) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; }
 </script>
 </body>
-</html
+</html>
+ 
